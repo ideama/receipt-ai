@@ -5,6 +5,8 @@ export interface ExtractedReceiptData {
     date: string;       // YYYY-MM-DD
     amount: number;
     currency: string;
+    items: string;      // Comma-separated list of purchased items/descriptions
+    receiptType: string; // e.g. "飲食", "交通", "印刷_証明書", "消耗品", "宿泊"
     rawText: string;
 }
 
@@ -23,7 +25,7 @@ export async function extractReceiptData(
 
     if (!apiKey) {
         console.warn('[OCR] OPENAI_API_KEY not set — skipping OCR');
-        return { vendor: '', date: '', amount: 0, currency: 'JPY', rawText: '' };
+        return { vendor: '', date: '', amount: 0, currency: 'JPY', items: '', receiptType: '', rawText: '' };
     }
 
     const isPdf = mimeType === 'application/pdf';
@@ -42,22 +44,24 @@ export async function extractReceiptData(
     const base64 = fileBuffer.toString('base64');
     const dataUrl = `data:${imageType};base64,${base64}`;
 
-
     const client = new OpenAI({ apiKey });
 
-    const prompt = `You are a receipt OCR assistant. Analyze this receipt image and extract the following fields.
-Return ONLY a valid JSON object with these exact keys, nothing else:
+    const prompt = `あなたはレシートOCRの専門家です。以下のレシート画像を詳しく分析してください。
+JSONのみで返答してください（説明は不要）:
 {
-  "vendor": "store or company name",
-  "date": "date in YYYY-MM-DD format",
-  "amount": total amount as a plain number (no commas or symbols),
-  "currency": "3-letter code: JPY, USD, EUR etc."
+  "vendor": "店舗名・会社名",
+  "date": "YYYY-MM-DD形式の日付",
+  "amount": 合計金額を数値で（円記号・カンマなし）,
+  "currency": "3文字の通貨コード（日本は JPY）",
+  "items": "購入した商品・サービスの名称（カンマ区切り）。例: コーヒー,サンドウィッチ / プリント代,証明書発行 / タクシー代 / 消耗品",
+  "receiptType": "レシートの種類を以下から1つ選択: 飲食/交通/宿泊/コンビニ購入/印刷_証明書/医療/通信/消耗品/書籍/研修_セミナー/その他"
 }
-Rules:
-- Default currency to JPY for Japanese receipts
-- Extract the TOTAL/合計 amount only
-- Convert Japanese dates (令和, 年月日, R6 etc.) to YYYY-MM-DD
-- Return empty string or 0 if a field cannot be found`;
+重要なルール:
+- 日本語レシートはデフォルトで JPY
+- 合計/合計金額/請求金額のみを amount に
+- 和暦（令和・平成・R6等）はYYYY-MM-DDに変換
+- items は必ずレシートに書かれた商品名・サービス名を全て抜き出すこと（コンビニ・レストランは特に重要）
+- 見つからない場合は空文字か0を返す`;
 
     try {
         const response = await client.chat.completions.create({
@@ -71,7 +75,7 @@ Rules:
                     ],
                 },
             ],
-            max_tokens: 200,
+            max_tokens: 400,
         });
 
         const text = response.choices[0]?.message?.content?.trim() || '';
@@ -86,10 +90,12 @@ Rules:
             date: parsed.date || '',
             amount: Number(parsed.amount) || 0,
             currency: parsed.currency || 'JPY',
+            items: parsed.items || '',
+            receiptType: parsed.receiptType || '',
             rawText: text,
         };
     } catch (err) {
         console.error('[OCR] OpenAI error:', err);
-        return { vendor: '', date: '', amount: 0, currency: 'JPY', rawText: '' };
+        return { vendor: '', date: '', amount: 0, currency: 'JPY', items: '', receiptType: '', rawText: '' };
     }
 }

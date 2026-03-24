@@ -114,15 +114,17 @@ export default function ReceiptDashboard() {
         const vendor = extracted.vendor || "";
         const amount = String(extracted.amount || 0);
         const date = extracted.date || new Date().toISOString().split('T')[0];
+        const items = extracted.items || "";
+        const receiptType = extracted.receiptType || "";
 
-        // Immediately ask AI for the best category based on vendor + amount
+        // Immediately ask AI for the best category based on vendor + amount + items purchased
         let category = "会議費";
         let description = "";
         try {
           const suggestRes = await fetch('/api/suggest-category', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ vendor, amount, currentCategory: "会議費" }),
+            body: JSON.stringify({ vendor, amount, currentCategory: "会議費", items, receiptType }),
           });
           if (suggestRes.ok) {
             const suggestion = await suggestRes.json();

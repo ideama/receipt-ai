@@ -18,7 +18,7 @@ export const CATEGORY_RULES = [
 
 export async function POST(req: NextRequest) {
   try {
-    const { vendor, amount, currentCategory, description } = await req.json();
+    const { vendor, amount, currentCategory, items, receiptType } = await req.json();
     const amountNum = parseFloat(String(amount).replace(/[^0-9.]/g, '')) || 0;
 
     const prompt = `あなたは日本の確定申告の仕訳の専門家です。
@@ -27,23 +27,34 @@ export async function POST(req: NextRequest) {
 レシート情報:
 - 店舗名: ${vendor}
 - 金額: ¥${amountNum.toLocaleString()}
+- 購入品目: ${items || '不明'}
+- レシート種類: ${receiptType || '不明'}
 - 現在のカテゴリー: ${currentCategory}
 
-利用可能なカテゴリー（日本語名 - 説明の順）:
-${CATEGORY_RULES.map(c => `- ${c.name}: ${c.description}`).join('\n')}
+利用可能なカテゴリー:
+- 会議費: コーヒー・軽食での打合せ（¥5,000未満の飲食）
+- 接待交際費: 取引先との飲食・接待（¥5,000以上の飲食店）
+- 旅費交通費: 電車・タクシー・飛行機・ホテル
+- 通信費: 電話・インターネット・ソフトウェア
+- 消耗品費: 文房具・オフィス用品・コンビニ日用品
+- 広告宣伝費: 広告・マーケティング費用
+- 新聞図書費: 書籍・新聞・雑誌
+- 研修費: セミナー・研修参加費
+- 雑費: プリント代・証明書発行・その他コンビニサービス
 
-重要なルール:
-1. 飲食店で¥5,000を超える場合、「会議費」ではなく「接待交際費」が適切
-2. 交通機関（電車、タクシー、飛行機）は「旅費交通費」
-3. 通信・ソフトウェア・サブスクリプションは「通信費」
-4. コーヒーや軽い打合せ飲食（¥5,000未満）は「会議費」でOK
+【重要な判断ルール】:
+1. 「プリント代」「印刷」「証明書」「コピー代」→「雑費」
+2. コンビニで食品以外（日用品・雑貨）→「消耗品費」
+3. 飲食店で¥5,000超 →「接待交際費」、¥5,000未満 →「会議費」
+4. タクシー・電車・飛行機・ホテル →「旅費交通費」
+5. 書籍・雑誌 →「新聞図書費」
 
-JSONのみで回答してください（説明不要）:
+JSONのみで回答（説明不要）:
 {
   "suggestedCategory": "最適なカテゴリー名",
-  "defaultDescription": "この費用の一般的な説明（日本語、20文字以内）",
-  "reason": "なぜこのカテゴリーを勧めるか（日本語、30文字以内）",
-  "shouldChange": true または false（現在のカテゴリーから変更すべきか）
+  "defaultDescription": "この費用の一般的な説明（日本語、25文字以内）",
+  "reason": "なぜこのカテゴリーか（日本語、30文字以内）",
+  "shouldChange": true または false
 }`;
 
     const res = await openai.chat.completions.create({
@@ -57,7 +68,7 @@ JSONのみで回答してください（説明不要）:
 
     return NextResponse.json({
       suggestedCategory: result.suggestedCategory || currentCategory,
-      defaultDescription: result.defaultDescription || description || '',
+      defaultDescription: result.defaultDescription || '',
       reason: result.reason || '',
       shouldChange: result.shouldChange ?? false,
     });
