@@ -13,6 +13,7 @@ export const CATEGORY_RULES = [
   { name: '広告宣伝費', description: 'SNS広告・マーケティング費', type: ['advertising', 'marketing'] },
   { name: '新聞図書費', description: '業務用書籍・新聞', type: ['books', 'newspaper', 'magazine'] },
   { name: '研修費', description: '業務研修・セミナー参加', type: ['education', 'seminar', 'training'] },
+  { name: '荷造運賃', description: '商品・書類の発送費用', type: ['shipping', 'post', 'delivery'] },
   { name: '雑費', description: 'その他の業務費用', type: ['other'] },
 ];
 
@@ -40,6 +41,7 @@ export async function POST(req: NextRequest) {
 - 広告宣伝費: 広告・マーケティング費用
 - 新聞図書費: 書籍・新聞・雑誌
 - 研修費: セミナー・研修参加費
+- 荷造運賃: 郵便局での商品発送・ゆうパック等の配送
 - 雑費: プリント代・証明書発行・その他コンビニサービス
 
 【重要な判断ルール】:
@@ -48,6 +50,7 @@ export async function POST(req: NextRequest) {
 3. 飲食店で¥5,000超 →「接待交際費」、¥5,000未満 →「会議費」
 4. タクシー・電車・飛行機・ホテル →「旅費交通費」
 5. 書籍・雑誌 →「新聞図書費」
+6. 郵便局・宅配便での発送について、商品発送（ゆうパック等）なら「荷造運賃」、書類送付（レターパック等）なら「通信費」
 
 JSONのみで回答（説明不要）:
 {

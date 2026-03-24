@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
-import { FileSpreadsheet } from "lucide-react";
+import { FileSpreadsheet, Trash2 } from "lucide-react";
 import { DashboardHeader } from "@/components/dashboard-header";
 import { UploadZone } from "@/components/upload-zone";
 import { ReceiptCard, type ReceiptData } from "@/components/receipt-card";
@@ -206,6 +206,10 @@ export default function ReceiptDashboard() {
     }
   }, [receipts, handleSaveReceipt]);
 
+  const handleClearSaved = useCallback(() => {
+    setReceipts((prev) => prev.filter((r) => r.status !== "saved"));
+  }, []);
+
   const readyReceipts = receipts.filter((r) => r.status === "ready");
   const processingCount = receipts.filter((r) => r.status === "processing").length;
 
@@ -279,6 +283,12 @@ export default function ReceiptDashboard() {
                     <span className="rounded-full bg-warning px-2 py-0.5 text-xs font-medium text-warning-foreground">
                       {processingCount} processing
                     </span>
+                  )}
+                  {receipts.some(r => r.status === "saved") && (
+                    <Button onClick={handleClearSaved} variant="outline" size="sm" className="ml-auto gap-1 text-muted-foreground hover:text-destructive">
+                      <Trash2 className="h-3.5 w-3.5" />
+                      保存済みをクリア
+                    </Button>
                   )}
                 </div>
                 <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">

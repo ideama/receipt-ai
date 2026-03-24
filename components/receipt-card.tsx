@@ -40,6 +40,7 @@ export const JP_CATEGORIES = [
   "広告宣伝費",
   "新聞図書費",
   "研修費",
+  "荷造運賃",
   "雑費",
 ];
 
@@ -53,6 +54,7 @@ const DEFAULT_DESCRIPTIONS: Record<string, string> = {
   広告宣伝費: "SNS広告・マーケティング費",
   新聞図書費: "業務用書籍・新聞",
   研修費: "業務研修・セミナー参加",
+  荷造運賃: "商品・書類の発送費用",
   雑費: "その他の業務費用",
 };
 
@@ -393,7 +395,16 @@ export function ReceiptCard({ receipt, onUpdate, onDelete, onSave }: ReceiptCard
                         Sheetsへ保存
                       </Button>
                     )}
-                    <Button size="sm" variant="outline" onClick={() => setIsEditing(true)} className="gap-1">
+                    <Button size="sm" variant="outline" onClick={() => {
+                      setEditData({
+                        merchantName: receipt.merchantName,
+                        totalAmount: receipt.totalAmount,
+                        date: receipt.date,
+                        category: receipt.category,
+                        description: receipt.description || DEFAULT_DESCRIPTIONS[receipt.category] || "",
+                      });
+                      setIsEditing(true);
+                    }} className="gap-1">
                       <Pencil className="h-3 w-3" />
                       編集
                     </Button>
