@@ -18,7 +18,12 @@ export default function UploadArea({ onFilesSelected, isLoading }: UploadAreaPro
         (fileList: FileList | null) => {
             if (!fileList) return;
             const valid = Array.from(fileList).filter((f) => ALLOWED.includes(f.type));
-            if (valid.length > 0) onFilesSelected(valid);
+            if (valid.length > 0) {
+                // Yield the main thread to allow the browser to paint the interaction immediately (Fixes INP)
+                setTimeout(() => {
+                    onFilesSelected(valid);
+                }, 0);
+            }
         },
         [onFilesSelected]
     );
