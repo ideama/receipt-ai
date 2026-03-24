@@ -116,12 +116,43 @@ export default function Home() {
         return { fileName: data.fileName, driveWebViewLink: data.driveWebViewLink };
     };
 
-    const handleFilesSelected = useCallback(async (files: File[]) => {
+    const handleFilesSelected = useCallback(async (selected: File[]) => {
+        // Show loading immediately (allows UI to paint spinner before heavy browser HEIC conversion)
+        setAppState('extracting');
+        setErrorMsg('');
+
+        // 1. Process files in browser (Convert HEIC -> JPEG)
+        const processedFiles: File[] = [];
+        for (const file of selected) {
+            const ext = file.name.split('.').pop()?.toLowerCase() || '';
+            const isHEIC = ext === 'heic' || ext === 'heif' || file.type === 'image/heic' || file.type === 'image/heif';
+
+            if (isHEIC) {
+                try {
+                    console.log(`[HEIC] Converting ${file.name} to JPEG in browser...`);
+                    const heic2any = (await import('heic2any')).default;
+                    const convertedBlob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.85 });
+                    const blob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+                    
+                    const newName = file.name.replace(/\.(heic|heif)$/i, '.jpg');
+                    const newFile = new File([blob], newName, { type: 'image/jpeg' });
+                    processedFiles.push(newFile);
+                    console.log('[HEIC] Converted successfully');
+                } catch (err) {
+                    console.error('[HEIC] Browser conversion failed:', err);
+                    processedFiles.push(file); // fallback
+                }
+            } else {
+                processedFiles.push(file);
+            }
+        }
+        
+        const files = processedFiles;
+
+        // 2. Proceed with OCR
         if (files.length === 1) {
             const file = files[0];
             setSelectedFile(file);
-            setAppState('extracting');
-            setErrorMsg('');
             try {
                 const ex = await ocrFile(file);
                 setExtracted(ex);

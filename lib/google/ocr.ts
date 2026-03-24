@@ -28,45 +28,18 @@ export async function extractReceiptData(
 
     const isPdf = mimeType === 'application/pdf';
 
-    // Detect HEIC by MIME type OR file extension (browsers sometimes report HEIC as octet-stream)
-    const ext = (fileName || '').split('.').pop()?.toLowerCase() || '';
-    const isHEICByExt = ext === 'heic' || ext === 'heif';
-    const isHEICByMime = mimeType === 'image/heic' || mimeType === 'image/heif';
-
-    let processedBuffer = fileBuffer;
-    let imageType = 'image/jpeg';
-
+    let imageType = mimeType;
     if (isPdf) {
-        // For PDFs, send PDF data directly to GPT-4o (it can read them via base64)
         imageType = 'application/pdf';
-        processedBuffer = fileBuffer;
     } else {
-        // For all images (HEIC, JPEG, PNG etc.), normalize to JPEG via sharp
-        // This is the most reliable strategy across all serverless environments
-        try {
-            const sharp = (await import('sharp')).default;
-            if (isHEICByMime || isHEICByExt) {
-                // For HEIC, use the raw buffer input — sharp auto-detects format from magic bytes
-                processedBuffer = await sharp(fileBuffer, { failOnError: false })
-                    .jpeg({ quality: 90 })
-                    .toBuffer();
-                console.log('[OCR] HEIC→JPEG via sharp, output size:', processedBuffer.length);
-            } else {
-                // For other images, still normalize to JPEG for consistent quality
-                processedBuffer = await sharp(fileBuffer, { failOnError: false })
-                    .jpeg({ quality: 90 })
-                    .toBuffer();
-                console.log('[OCR] Image normalized to JPEG via sharp');
-            }
-            imageType = 'image/jpeg';
-        } catch (convErr) {
-            console.warn('[OCR] sharp conversion failed, using raw buffer:', convErr);
-            // Fall back to sending raw buffer — label as JPEG as last resort
-            imageType = isHEICByMime || isHEICByExt ? 'image/jpeg' : (mimeType || 'image/jpeg');
-        }
+        // Fallback for browsers passing octet-stream for images
+        const ext = (fileName || '').split('.').pop()?.toLowerCase() || '';
+        if (ext === 'jpg' || ext === 'jpeg') imageType = 'image/jpeg';
+        else if (ext === 'png') imageType = 'image/png';
+        else if (!mimeType || mimeType === 'application/octet-stream') imageType = 'image/jpeg';
     }
 
-    const base64 = processedBuffer.toString('base64');
+    const base64 = fileBuffer.toString('base64');
     const dataUrl = `data:${imageType};base64,${base64}`;
 
 
