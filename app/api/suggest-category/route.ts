@@ -3,19 +3,7 @@ import OpenAI from 'openai';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// Japanese accounting categories with rules and default descriptions
-export const CATEGORY_RULES = [
-  { name: '会議費', description: '社内会議・打合せ', threshold: 5000, type: ['coffee', 'small restaurant', 'meeting room', 'cafe'] },
-  { name: '接待交際費', description: '取引先・インフルエンサー接待', type: ['restaurant', 'bar', 'entertainment'] },
-  { name: '旅費交通費', description: '業務出張・交通費', type: ['transport', 'hotel', 'train', 'taxi', 'flight'] },
-  { name: '通信費', description: '業務用通信費・インターネット', type: ['phone', 'internet', 'communication', 'software'] },
-  { name: '消耗品費', description: '業務用消耗品・文房具', type: ['supplies', 'stationery', 'office'] },
-  { name: '広告宣伝費', description: 'SNS広告・マーケティング費', type: ['advertising', 'marketing'] },
-  { name: '新聞図書費', description: '業務用書籍・新聞', type: ['books', 'newspaper', 'magazine'] },
-  { name: '研修費', description: '業務研修・セミナー参加', type: ['education', 'seminar', 'training'] },
-  { name: '荷造運賃', description: '商品・書類の発送費用', type: ['shipping', 'post', 'delivery'] },
-  { name: '雑費', description: 'その他の業務費用', type: ['other'] },
-];
+// Expanded Japanese accounting categories list (19 categories)
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,24 +21,35 @@ export async function POST(req: NextRequest) {
 - 現在のカテゴリー: ${currentCategory}
 
 利用可能なカテゴリー:
-- 会議費: コーヒー・軽食での打合せ（¥5,000未満の飲食）
-- 接待交際費: 取引先との飲食・接待（¥5,000以上の飲食店）
-- 旅費交通費: 電車・タクシー・飛行機・ホテル
-- 通信費: 電話・インターネット・ソフトウェア
-- 消耗品費: 文房具・オフィス用品・コンビニ日用品
-- 広告宣伝費: 広告・マーケティング費用
+- 消耗品費: 業務用消耗品・文具・10万円未満の備品
+- 会議費: コーヒー・軽食での打合せ（1人5,000円以下の飲食）
+- 接待交際費: 取引先との飲食・接待（1人5,000円超の飲食店）
+- 旅費交通費: 電車・タクシー・飛行機・ホテル・ガソリン代
+- 通信費: 電話・インターネット回線・切手代・ソフトウェア
+- 水道光熱費: 電気・ガス・水道の料金
+- 地代家賃: オフィス・店舗・駐車場などの賃料・コワーキングスペース
+- 広告宣伝費: Web広告・SNSマーケティング費用
 - 新聞図書費: 書籍・新聞・雑誌
 - 研修費: セミナー・研修参加費
-- 荷造運賃: 郵便局での商品発送・ゆうパック等の配送
-- 雑費: プリント代・証明書発行・その他コンビニサービス
+- 荷造運賃: 郵便局での商品発送・ゆうパック・宅配便
+- 修繕費: パソコンや備品、店舗などの修理代
+- リース料: 業務用のコピー機や車両などのリース代
+- 諸会費: 業務関連団体や同業組合などの会費
+- 支払手数料: 銀行振込手数料や各種代行手数料
+- 外注業務費: 外部業者・フリーランスへの業務委託費
+- 租税公課: 収入印紙や事業税、公的な各種証明書の発行手数料
+- 保険料: 事業用損害保険・自動車保険などの保険料
+- 雑費: プリント代・その他少額のコンビニサービス（上記以外）
 
 【重要な判断ルール】:
-1. 「プリント代」「印刷」「証明書」「コピー代」→「雑費」
-2. コンビニで食品以外（日用品・雑貨）→「消耗品費」
-3. 飲食店で¥5,000超 →「接待交際費」、¥5,000未満 →「会議費」
-4. タクシー・電車・飛行機・ホテル →「旅費交通費」
-5. 書籍・雑誌 →「新聞図書費」
-6. 郵便局・宅配便での発送について、商品発送（ゆうパック等）なら「荷造運賃」、書類送付（レターパック等）なら「通信費」
+1. ガス・電気・水道代 →「水道光熱費」
+2. 銀行送金手数料、決済手数料 →「支払手数料」
+3. 家賃、駐車場代、レンタルオフィス代 →「地代家賃」
+4. 収入印紙、役所での公的な証明書発行 →「租税公課」
+5. 単なるプリント代・コピー代 →「雑費」
+6. コンビニで食品以外（日用品・雑貨） →「消耗品費」
+7. 飲食店で接待（5000円超など） →「接待交際費」、カフェや軽食 →「会議費」
+8. 郵便局での商品発送（ゆうパック等）→「荷造運賃」、書類送付（レターパック等）→「通信費」
 
 JSONのみで回答（説明不要）:
 {
