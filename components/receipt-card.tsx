@@ -28,6 +28,7 @@ export interface ReceiptData {
   description: string;
   confidence: number;
   status: ReceiptStatus;
+  errorMsg?: string;
 }
 
 export const JP_CATEGORIES = [
@@ -201,16 +202,21 @@ export function ReceiptCard({ receipt, onUpdate, onDelete, onSave }: ReceiptCard
         {/* Content */}
         <div className="flex flex-1 flex-col p-4">
           {/* Status & Confidence */}
-          <div className="mb-3 flex items-center justify-between">
-            <Badge className={cn("text-xs", status.color)}>
-              {receipt.status === "processing" && (
-                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+          <div className="mb-3 flex items-start justify-between gap-2">
+            <div className="flex flex-col gap-1">
+              <Badge className={cn("text-xs w-fit", status.color)}>
+                {receipt.status === "processing" && (
+                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                )}
+                {receipt.status === "saved" && (
+                  <Check className="mr-1 h-3 w-3" />
+                )}
+                {status.label}
+              </Badge>
+              {receipt.status === "error" && receipt.errorMsg && (
+                <p className="text-xs text-destructive/80 max-w-[200px] leading-tight">{receipt.errorMsg}</p>
               )}
-              {receipt.status === "saved" && (
-                <Check className="mr-1 h-3 w-3" />
-              )}
-              {status.label}
-            </Badge>
+            </div>
 
             {receipt.status !== "processing" && (
               <div className="flex items-center gap-1 text-xs text-muted-foreground">

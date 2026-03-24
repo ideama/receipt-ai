@@ -167,9 +167,23 @@ export default function ReceiptDashboard() {
   }, []);
 
   const handleSaveReceipt = useCallback(async (id: string) => {
-    setReceipts((prev) => prev.map((r) => (r.id === id ? { ...r, status: "processing" } : r)));
-    const receiptToSave = receipts.find(r => r.id === id);
+    // Read latest receipt state before sending to avoid stale closures
+    let receiptToSave: AppReceiptData | undefined;
+    setReceipts((prev) => {
+      const r = prev.find(r => r.id === id);
+      if (r) receiptToSave = r;
+      return prev.map((r) => (r.id === id ? { ...r, status: "processing" } : r));
+    });
+
+    // Wait a tick for state to flush
+    await new Promise(res => setTimeout(res, 0));
+
     if (!receiptToSave) return;
+
+    // Guarantee date is set
+    if (!receiptToSave.date) {
+      receiptToSave = { ...receiptToSave, date: new Date().toISOString().split('T')[0] };
+    }
     
     try {
       const data = await saveReceiptApi(receiptToSave);
@@ -177,7 +191,9 @@ export default function ReceiptDashboard() {
         prev.map((r) => (r.id === id ? { ...r, status: "saved", driveWebViewLink: data.driveWebViewLink } : r))
       );
     } catch (e) {
-      setReceipts((prev) => prev.map((r) => (r.id === id ? { ...r, status: "error", errorMsg: "Failed to save" } : r)));
+      const msg = e instanceof Error ? e.message : 'Save failed';
+      console.error('[save] Error:', msg);
+      setReceipts((prev) => prev.map((r) => (r.id === id ? { ...r, status: "error", errorMsg: msg } : r)));
     }
   }, [receipts, sheetId, folderName]);
 
