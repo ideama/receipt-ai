@@ -64,7 +64,7 @@ export default function ReceiptDashboard() {
     form.append('amount', String(receipt.totalAmount).replace(/[^0-9.]/g, ''));
     form.append('currency', 'JPY');
     form.append('category', receipt.category);
-    form.append('description', '');
+    form.append('description', receipt.description || '');
     if (sheetId) form.append('customSheetId', sheetId);
     if (folderName) form.append('customFolderName', folderName);
 
@@ -100,7 +100,8 @@ export default function ReceiptDashboard() {
       merchantName: "",
       totalAmount: "",
       date: "",
-      category: "Other",
+      category: "会議費",
+      description: "",
       confidence: 0,
       status: "processing",
     }));
@@ -119,7 +120,8 @@ export default function ReceiptDashboard() {
                   totalAmount: String(extracted.amount || 0),
                   date: extracted.date || new Date().toISOString().split('T')[0],
                   category: extracted.category || "会議費",
-                  confidence: 95, // mock high confidence if no error
+                  description: "",
+                  confidence: 95,
                   status: "ready" as const 
                 }
               : r

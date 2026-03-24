@@ -1,6 +1,8 @@
 "use client";
 
-import { Check, Loader2, Clock } from "lucide-react";
+import React from "react";
+
+import { Check, Loader2, Clock, AlertCircle } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -28,21 +30,26 @@ export function ReceiptsTable({ receipts }: ReceiptsTableProps) {
     );
   }
 
-  const statusConfig = {
+  const statusConfig: Record<ReceiptData['status'], { label: string; color: string; icon: React.ElementType }> = {
     processing: { 
-      label: "Processing", 
+      label: "処理中", 
       color: "bg-warning text-warning-foreground",
       icon: Loader2 
     },
     ready: { 
-      label: "Ready", 
+      label: "確認待ち", 
       color: "bg-primary text-primary-foreground",
       icon: Clock 
     },
     saved: { 
-      label: "Saved", 
+      label: "保存済み", 
       color: "bg-success text-success-foreground",
       icon: Check 
+    },
+    error: { 
+      label: "エラー", 
+      color: "bg-destructive text-destructive-foreground",
+      icon: AlertCircle 
     },
   };
 
