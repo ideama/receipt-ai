@@ -539,7 +539,7 @@ export default function Home() {
                                 {/* Animated check */}
                                 <div className="mx-auto mb-5 w-16 h-16 rounded-full flex items-center justify-center"
                                     style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)' }}>
-                                    <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg style={{ width: 32, height: 32 }} className="text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                     </svg>
                                 </div>
