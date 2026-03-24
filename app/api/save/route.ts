@@ -23,8 +23,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Unauthorized — no session or token' }, { status: 401 });
     }
 
-    const spreadsheetId = process.env.GOOGLE_SPREADSHEET_ID;
-    if (!spreadsheetId) {
+    const defaultSpreadsheetId = process.env.GOOGLE_SPREADSHEET_ID;
+    if (!defaultSpreadsheetId) {
         return NextResponse.json(
             { error: 'GOOGLE_SPREADSHEET_ID not configured' },
             { status: 500 }
@@ -40,6 +40,10 @@ export async function POST(req: NextRequest) {
         const currency = (formData.get('currency') as string) || 'JPY';
         const category = (formData.get('category') as string) || '';
         const description = (formData.get('description') as string) || '';
+        // Custom destination overrides from the client UI
+        const customSheetId = (formData.get('customSheetId') as string) || '';
+        const customFolderName = (formData.get('customFolderName') as string) || '';
+        const spreadsheetId = customSheetId || defaultSpreadsheetId;
 
         if (!file || !vendor || !date || isNaN(amount)) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -59,7 +63,7 @@ export async function POST(req: NextRequest) {
         const receiptId = uuidv4(); // deterministic would require hashing; use UUID for MVP
 
         // Get or create folder in Drive
-        const folderId = await getOrCreateDateFolder(accessToken, year, month);
+        const folderId = await getOrCreateDateFolder(accessToken, year, month, customFolderName || undefined);
 
         // Duplicate check in Drive
         const driveHasDup = await checkDuplicate(accessToken, folderId, fileName);

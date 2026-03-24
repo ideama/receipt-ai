@@ -48,14 +48,16 @@ async function findOrCreateFolder(
 export async function getOrCreateDateFolder(
     accessToken: string,
     year: string,
-    month: string
+    month: string,
+    baseFolderName?: string
 ): Promise<string> {
+    const rootName = baseFolderName || DRIVE_ROOT_FOLDER_NAME;
     const oauth2Client = getOAuth2Client(accessToken);
     const drive = google.drive({ version: 'v3', auth: oauth2Client });
 
     // Root folder
     const rootRes = await drive.files.list({
-        q: `name='${DRIVE_ROOT_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and 'root' in parents and trashed=false`,
+        q: `name='${rootName}' and mimeType='application/vnd.google-apps.folder' and 'root' in parents and trashed=false`,
         fields: 'files(id)',
     });
     let rootId: string;
@@ -64,7 +66,7 @@ export async function getOrCreateDateFolder(
     } else {
         const created = await drive.files.create({
             requestBody: {
-                name: DRIVE_ROOT_FOLDER_NAME,
+                name: rootName,
                 mimeType: 'application/vnd.google-apps.folder',
             },
             fields: 'id',

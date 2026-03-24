@@ -1,7 +1,7 @@
 'use client';
 
 import { useSession, signIn, signOut } from 'next-auth/react';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import UploadArea from '@/components/UploadArea';
 import ReceiptPreview, { ReceiptFormData } from '@/components/ReceiptPreview';
@@ -44,6 +44,49 @@ export default function Home() {
     const [errorMsg, setErrorMsg] = useState('');
     const [bulkItems, setBulkItems] = useState<BulkItem[]>([]);
 
+    // ─── Destination settings ─────────────────────────────────────────────────
+    const [defaultSheetId, setDefaultSheetId] = useState('');
+    const [defaultFolderName, setDefaultFolderName] = useState('ReceiptAutomation');
+    const [customSheetId, setCustomSheetId] = useState('');
+    const [customFolderName, setCustomFolderName] = useState('');
+    const [showDestEdit, setShowDestEdit] = useState(false);
+    const editSheetRef = useRef<HTMLInputElement>(null);
+    const editFolderRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        // Fetch defaults from the server
+        fetch('/api/config').then(r => r.json()).then(d => {
+            setDefaultSheetId(d.defaultSheetId || '');
+            setDefaultFolderName(d.defaultFolderName || 'ReceiptAutomation');
+        }).catch(() => {});
+        // Restore any user overrides from localStorage
+        const savedSheet = localStorage.getItem('receiptai_customSheetId') || '';
+        const savedFolder = localStorage.getItem('receiptai_customFolderName') || '';
+        setCustomSheetId(savedSheet);
+        setCustomFolderName(savedFolder);
+    }, []);
+
+    const saveDestSettings = () => {
+        const sheet = editSheetRef.current?.value.trim() || '';
+        const folder = editFolderRef.current?.value.trim() || '';
+        setCustomSheetId(sheet);
+        setCustomFolderName(folder);
+        localStorage.setItem('receiptai_customSheetId', sheet);
+        localStorage.setItem('receiptai_customFolderName', folder);
+        setShowDestEdit(false);
+    };
+
+    const resetDestSettings = () => {
+        setCustomSheetId('');
+        setCustomFolderName('');
+        localStorage.removeItem('receiptai_customSheetId');
+        localStorage.removeItem('receiptai_customFolderName');
+        setShowDestEdit(false);
+    };
+
+    const activeSheetId = customSheetId || defaultSheetId;
+    const activeFolderName = customFolderName || defaultFolderName;
+
     const today = () => new Date().toISOString().split('T')[0];
 
     const ocrFile = async (file: File): Promise<Partial<ExtractedData>> => {
@@ -64,6 +107,9 @@ export default function Home() {
         form.append('currency', fd.currency);
         form.append('category', fd.category);
         form.append('description', fd.description);
+        // Pass custom destination overrides if set
+        if (customSheetId) form.append('customSheetId', customSheetId);
+        if (customFolderName) form.append('customFolderName', customFolderName);
         const res = await fetch('/api/save', { method: 'POST', body: form });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Save failed');
@@ -303,6 +349,100 @@ export default function Home() {
                             <p className="text-white/40 text-sm mt-1">
                                 Drag & drop images or PDFs — AI extracts data and saves to Drive + Sheets automatically.
                             </p>
+                        </div>
+
+                        {/* ── Destination Settings panel ── */}
+                        <div className="glass-card px-5 py-4" style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.25)' }}>
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                    <svg style={{ width: 15, height: 15, color: '#a78bfa', flexShrink: 0 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                    <span className="text-xs font-semibold text-white/60 uppercase tracking-widest">Destinations</span>
+                                    {(customSheetId || customFolderName) && (
+                                        <span className="text-xs px-1.5 py-0.5 rounded-md font-semibold" style={{ background: 'rgba(139,92,246,0.2)', color: '#c4b5fd' }}>Custom</span>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    {(customSheetId || customFolderName) && (
+                                        <button onClick={resetDestSettings} className="text-xs text-white/30 hover:text-red-400 transition-colors">Reset</button>
+                                    )}
+                                    <button
+                                        onClick={() => setShowDestEdit(v => !v)}
+                                        className="text-xs px-2.5 py-1 rounded-lg border border-white/10 text-white/40 hover:text-white/70 hover:border-white/20 hover:bg-white/5 transition-all duration-200"
+                                    >
+                                        {showDestEdit ? 'Cancel' : 'Change'}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Destination links */}
+                            <div className="space-y-2">
+                                {/* Sheet */}
+                                <div className="flex items-center gap-2.5">
+                                    <span className="text-lg">📊</span>
+                                    <div className="flex flex-col min-w-0">
+                                        <span className="text-xs text-white/30 mb-0.5">Google Sheets</span>
+                                        {activeSheetId ? (
+                                            <a
+                                                href={`https://docs.google.com/spreadsheets/d/${activeSheetId}`}
+                                                target="_blank" rel="noopener noreferrer"
+                                                className="text-sm font-medium truncate max-w-xs transition-colors"
+                                                style={{ color: '#818cf8' }}
+                                                onMouseEnter={e => (e.currentTarget.style.color = '#a78bfa')}
+                                                onMouseLeave={e => (e.currentTarget.style.color = '#818cf8')}
+                                            >
+                                                {customSheetId ? `Custom: ${customSheetId.slice(0, 24)}…` : 'Default Spreadsheet ↗'}
+                                            </a>
+                                        ) : (<span className="text-sm text-white/20">Not configured</span>)}
+                                    </div>
+                                </div>
+                                {/* Drive folder */}
+                                <div className="flex items-center gap-2.5">
+                                    <span className="text-lg">📁</span>
+                                    <div className="flex flex-col min-w-0">
+                                        <span className="text-xs text-white/30 mb-0.5">Google Drive Folder</span>
+                                        <a
+                                            href={`https://drive.google.com/drive/search?q=${encodeURIComponent(activeFolderName)}`}
+                                            target="_blank" rel="noopener noreferrer"
+                                            className="text-sm font-medium transition-colors"
+                                            style={{ color: '#818cf8' }}
+                                            onMouseEnter={e => (e.currentTarget.style.color = '#a78bfa')}
+                                            onMouseLeave={e => (e.currentTarget.style.color = '#818cf8')}
+                                        >
+                                            {activeFolderName} ↗
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Inline edit panel */}
+                            {showDestEdit && (
+                                <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
+                                    <div>
+                                        <label className="block text-xs text-white/40 mb-1">Custom Sheet ID <span className="text-white/20">(leave blank to use default)</span></label>
+                                        <input
+                                            ref={editSheetRef}
+                                            defaultValue={customSheetId}
+                                            placeholder={defaultSheetId || 'Paste Google Sheet ID here…'}
+                                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-violet-500/50 transition-colors"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs text-white/40 mb-1">Custom Drive Folder Name <span className="text-white/20">(leave blank to use default)</span></label>
+                                        <input
+                                            ref={editFolderRef}
+                                            defaultValue={customFolderName}
+                                            placeholder={defaultFolderName}
+                                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-violet-500/50 transition-colors"
+                                        />
+                                    </div>
+                                    <button onClick={saveDestSettings} className="btn-primary text-sm px-4 py-2">
+                                        Save Destinations
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         {/* idle / error */}
