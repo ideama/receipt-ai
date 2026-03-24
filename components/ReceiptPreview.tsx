@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const CATEGORIES = [
     '会議費',
@@ -70,6 +70,17 @@ export default function ReceiptPreview({
         category: initialData.category || CATEGORIES[0],
         description: initialData.description || '',
     });
+
+    // Ensure form updates if initialData arrives after mount
+    useEffect(() => {
+        setForm(prev => ({
+            ...prev,
+            vendor: initialData.vendor || prev.vendor,
+            date: initialData.date || prev.date,
+            amount: initialData.amount || prev.amount,
+            currency: initialData.currency || prev.currency,
+        }));
+    }, [initialData]);
 
     const [focusedField, setFocusedField] = useState<string | null>(null);
 
