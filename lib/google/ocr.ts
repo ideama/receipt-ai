@@ -33,18 +33,15 @@ export async function extractReceiptData(
 
     if (isHEIC) {
         try {
-            // eslint-disable-next-line @typescript-eslint/no-require-imports
-            const heicConvert = require('heic-convert');
-            const converted = await heicConvert({
-                buffer: fileBuffer,
-                format: 'JPEG',
-                quality: 0.92,
-            });
-            processedBuffer = Buffer.from(converted);
+            // sharp is bundled with Next.js/Vercel and reliably handles HEIC on serverless
+            const sharp = (await import('sharp')).default;
+            const converted = await sharp(fileBuffer).jpeg({ quality: 92 }).toBuffer();
+            processedBuffer = converted;
             imageType = 'image/jpeg';
-            console.log('[OCR] HEIC converted to JPEG, size:', processedBuffer.length);
+            console.log('[OCR] HEIC→JPEG via sharp, size:', processedBuffer.length);
         } catch (convErr) {
-            console.warn('[OCR] HEIC conversion failed, attempting raw as JPEG:', convErr);
+            console.warn('[OCR] sharp HEIC conversion failed:', convErr);
+            // Fallback: still try as JPEG (last resort)
             imageType = 'image/jpeg';
         }
     } else {
