@@ -80,7 +80,7 @@ export function ReceiptCard({ receipt, onUpdate, onDelete, onSave }: ReceiptCard
   });
   const [suggestion, setSuggestion] = useState<CategorySuggestion | null>(null);
   const [isSuggesting, setIsSuggesting] = useState(false);
-  const [suggestionDismissed, setSuggestionDismissed] = useState(false);
+  const [suggestionDismissed, setSuggestionDismissed] = useState(true); // AI already ran at upload time
 
   // Auto-fetch AI suggestion when receipt becomes ready
   useEffect(() => {

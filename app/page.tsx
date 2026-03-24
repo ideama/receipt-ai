@@ -111,16 +111,38 @@ export default function ReceiptDashboard() {
     for (const receipt of newReceipts) {
       try {
         const extracted = await ocrFile(receipt.file);
+        const vendor = extracted.vendor || "";
+        const amount = String(extracted.amount || 0);
+        const date = extracted.date || new Date().toISOString().split('T')[0];
+
+        // Immediately ask AI for the best category based on vendor + amount
+        let category = "会議費";
+        let description = "";
+        try {
+          const suggestRes = await fetch('/api/suggest-category', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ vendor, amount, currentCategory: "会議費" }),
+          });
+          if (suggestRes.ok) {
+            const suggestion = await suggestRes.json();
+            category = suggestion.suggestedCategory || "会議費";
+            description = suggestion.defaultDescription || "";
+          }
+        } catch {
+          // fallback: keep 会議費
+        }
+
         setReceipts((prev) =>
           prev.map((r) =>
             r.id === receipt.id
               ? { 
                   ...r, 
-                  merchantName: extracted.vendor || "",
-                  totalAmount: String(extracted.amount || 0),
-                  date: extracted.date || new Date().toISOString().split('T')[0],
-                  category: extracted.category || "会議費",
-                  description: "",
+                  merchantName: vendor,
+                  totalAmount: amount,
+                  date,
+                  category,
+                  description,
                   confidence: 95,
                   status: "ready" as const 
                 }
@@ -133,6 +155,7 @@ export default function ReceiptDashboard() {
         );
       }
     }
+
   }, []);
 
   const handleUpdateReceipt = useCallback((id: string, data: Partial<ReceiptData>) => {
