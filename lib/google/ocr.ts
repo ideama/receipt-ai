@@ -26,9 +26,32 @@ export async function extractReceiptData(
     }
 
     const supportedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-    // GPT-4o doesn't support HEIC natively — treat as jpeg
-    const imageType = supportedTypes.includes(mimeType) ? mimeType : 'image/jpeg';
-    const base64 = fileBuffer.toString('base64');
+    const isHEIC = mimeType === 'image/heic' || mimeType === 'image/heif';
+
+    let processedBuffer = fileBuffer;
+    let imageType = mimeType;
+
+    if (isHEIC) {
+        try {
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+            const heicConvert = require('heic-convert');
+            const converted = await heicConvert({
+                buffer: fileBuffer,
+                format: 'JPEG',
+                quality: 0.92,
+            });
+            processedBuffer = Buffer.from(converted);
+            imageType = 'image/jpeg';
+            console.log('[OCR] HEIC converted to JPEG, size:', processedBuffer.length);
+        } catch (convErr) {
+            console.warn('[OCR] HEIC conversion failed, attempting raw as JPEG:', convErr);
+            imageType = 'image/jpeg';
+        }
+    } else {
+        imageType = supportedTypes.includes(mimeType) ? mimeType : 'image/jpeg';
+    }
+
+    const base64 = processedBuffer.toString('base64');
     const dataUrl = `data:${imageType};base64,${base64}`;
 
     const client = new OpenAI({ apiKey });
