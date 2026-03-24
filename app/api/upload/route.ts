@@ -21,8 +21,10 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'No file provided' }, { status: 400 });
         }
 
+        const ext = file.name.split('.').pop()?.toLowerCase() || '';
+        const isHEICByExt = ext === 'heic' || ext === 'heif';
         const allowedTypes = ['image/jpeg', 'image/png', 'image/heic', 'image/heif', 'application/pdf'];
-        if (!allowedTypes.includes(file.type)) {
+        if (!allowedTypes.includes(file.type) && !isHEICByExt) {
             return NextResponse.json(
                 { error: `Unsupported file type: ${file.type}` },
                 { status: 400 }
@@ -32,7 +34,7 @@ export async function POST(req: NextRequest) {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
-        const extracted = await extractReceiptData(buffer, file.type, accessToken || '');
+        const extracted = await extractReceiptData(buffer, file.type, accessToken || '', file.name);
         console.log('[upload] OCR result:', JSON.stringify(extracted));
 
         return NextResponse.json({
